@@ -34,10 +34,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SmartToy
@@ -85,6 +87,8 @@ import kotlinx.coroutines.launch
 fun ChatMessageItem(
     message: ChatMessageEntity,
     isStreaming: Boolean = false,
+    onPreviewHtml: (String) -> Unit = {},
+    onExportDocument: (content: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isUser = message.role == "user"
@@ -150,7 +154,9 @@ fun ChatMessageItem(
                     tokenCount = message.tokenCount,
                     latencyMs = message.latencyMs,
                     searchQuery = message.searchQuery,
-                    webSourcesJson = message.webSourcesJson
+                    webSourcesJson = message.webSourcesJson,
+                    onPreviewHtml = onPreviewHtml,
+                    onExportDocument = onExportDocument
                 )
             }
         }
@@ -165,7 +171,9 @@ private fun AssistantMessageBody(
     tokenCount: Int,
     latencyMs: Long,
     searchQuery: String? = null,
-    webSourcesJson: String? = null
+    webSourcesJson: String? = null,
+    onPreviewHtml: (String) -> Unit = {},
+    onExportDocument: (content: String) -> Unit = {}
 ) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
@@ -203,7 +211,7 @@ private fun AssistantMessageBody(
         }
 
         // Render main content with markdown / code blocks
-        RenderMarkdownContent(text = mainContent)
+        RenderMarkdownContent(text = mainContent, onPreviewHtml = onPreviewHtml)
 
         if (isStreaming) {
             Text(
@@ -251,8 +259,23 @@ private fun AssistantMessageBody(
                     Spacer(modifier = Modifier.width(1.dp))
                 }
 
-                // Copy Action
+                // Action Buttons: Export to Document & Copy
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Export to PDF, Word, Presentation
+                    IconButton(
+                        onClick = { onExportDocument(content) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = "Export Document",
+                            tint = TextMuted,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
                     IconButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -336,7 +359,10 @@ fun ThinkingBlock(thinkContent: String) {
 }
 
 @Composable
-fun RenderMarkdownContent(text: String) {
+fun RenderMarkdownContent(
+    text: String,
+    onPreviewHtml: (String) -> Unit = {}
+) {
     // Split text into code blocks and prose
     val segments = text.split("```")
 
@@ -359,16 +385,30 @@ fun RenderMarkdownContent(text: String) {
             val lang = if (firstLineBreak > 0) codeRaw.substring(0, firstLineBreak).trim() else "code"
             val codeBody = if (firstLineBreak > 0) codeRaw.substring(firstLineBreak + 1) else codeRaw
 
-            CodeBlock(language = lang.ifBlank { "code" }, code = codeBody.trimEnd())
+            CodeBlock(
+                language = lang.ifBlank { "code" },
+                code = codeBody.trimEnd(),
+                onPreviewHtml = onPreviewHtml
+            )
         }
     }
 }
 
 @Composable
-fun CodeBlock(language: String, code: String) {
+fun CodeBlock(
+    language: String,
+    code: String,
+    onPreviewHtml: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    val isHtml = language.equals("html", ignoreCase = true) ||
+            language.equals("htm", ignoreCase = true) ||
+            code.contains("<!DOCTYPE", ignoreCase = true) ||
+            code.contains("<html", ignoreCase = true) ||
+            (code.contains("<div", ignoreCase = true) && code.contains("</div>", ignoreCase = true))
 
     Column(
         modifier = Modifier
@@ -395,35 +435,65 @@ fun CodeBlock(language: String, code: String) {
                 fontWeight = FontWeight.Bold
             )
 
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .clickable {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("code", code)
-                        clipboard.setPrimaryClip(clip)
-                        copied = true
-                        Toast.makeText(context, "کد کپی شد", Toast.LENGTH_SHORT).show()
-                        scope.launch {
-                            delay(2000)
-                            copied = false
-                        }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // If HTML code, show Live Preview button
+                if (isHtml) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(DezhAiCyan.copy(alpha = 0.2f))
+                            .clickable { onPreviewHtml(code) }
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Live Preview",
+                            tint = DezhAiCyan,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "اجرای زنده HTML",
+                            color = DezhAiCyan,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
-                    contentDescription = "Copy Code",
-                    tint = if (copied) ChatGptEmerald else TextGray,
-                    modifier = Modifier.size(13.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = if (copied) "کپی شد" else "کپی کد",
-                    color = if (copied) ChatGptEmerald else TextGray,
-                    fontSize = 11.sp
-                )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .clickable {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("code", code)
+                            clipboard.setPrimaryClip(clip)
+                            copied = true
+                            Toast.makeText(context, "کد کپی شد", Toast.LENGTH_SHORT).show()
+                            scope.launch {
+                                delay(2000)
+                                copied = false
+                            }
+                        }
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
+                        contentDescription = "Copy Code",
+                        tint = if (copied) ChatGptEmerald else TextGray,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (copied) "کپی شد" else "کپی کد",
+                        color = if (copied) ChatGptEmerald else TextGray,
+                        fontSize = 11.sp
+                    )
+                }
             }
         }
 

@@ -66,6 +66,7 @@ fun ChatTopBar(
     onNewChat: () -> Unit,
     onSelectModel: (Long) -> Unit,
     onOpenModelManager: () -> Unit,
+    onOpenQuickSettings: () -> Unit,
     onClearChat: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -186,6 +187,30 @@ fun ChatTopBar(
                                 Icon(
                                     imageVector = Icons.Default.Tune,
                                     contentDescription = null,
+                                    tint = DezhAiCyan,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "تنظیمات سریع کانتکست و پارامترها...",
+                                    color = DezhAiCyan,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        },
+                        onClick = {
+                            modelDropdownExpanded = false
+                            onOpenQuickSettings()
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
                                     tint = ChatGptEmerald,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -224,6 +249,18 @@ fun ChatTopBar(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
+            }
+
+            // Quick Model Tuning Button (Context size, Temp, Threads)
+            IconButton(
+                onClick = onOpenQuickSettings,
+                modifier = Modifier.testTag("quick_model_settings_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = "Model & Context Settings",
+                    tint = DezhAiCyan
+                )
             }
 
             // New Chat Button

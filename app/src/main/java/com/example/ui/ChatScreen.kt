@@ -33,7 +33,10 @@ import com.example.ui.components.ChatInputArea
 import com.example.ui.components.ChatMessageItem
 import com.example.ui.components.ChatTopBar
 import com.example.ui.components.EmptyChatView
+import com.example.ui.components.ExportDocumentDialog
 import com.example.ui.components.GgufManagerDialog
+import com.example.ui.components.HtmlPreviewDialog
+import com.example.ui.components.ModelQuickSettingsDialog
 import com.example.ui.components.ProjectDialog
 import com.example.ui.theme.DarkBg
 import com.example.ui.viewmodel.DezhAiViewModel
@@ -55,6 +58,7 @@ fun ChatScreen(
     val models by viewModel.allModels.collectAsStateWithLifecycle()
 
     val currentSessionId by viewModel.currentSessionId.collectAsStateWithLifecycle()
+    val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
     val currentProjectId by viewModel.currentProjectId.collectAsStateWithLifecycle()
     val currentMessages by viewModel.currentMessages.collectAsStateWithLifecycle()
     val streamingText by viewModel.streamingText.collectAsStateWithLifecycle()
@@ -67,7 +71,10 @@ fun ChatScreen(
 
     var inputText by remember { mutableStateOf("") }
     var showModelManager by remember { mutableStateOf(false) }
+    var showQuickSettings by remember { mutableStateOf(false) }
     var showProjectDialog by remember { mutableStateOf(false) }
+    var previewHtmlCode by remember { mutableStateOf<String?>(null) }
+    var exportContent by remember { mutableStateOf<String?>(null) }
 
     val listState = rememberLazyListState()
 
@@ -140,6 +147,7 @@ fun ChatScreen(
                     onNewChat = { viewModel.createNewChat() },
                     onSelectModel = { viewModel.selectModel(it) },
                     onOpenModelManager = { showModelManager = true },
+                    onOpenQuickSettings = { showQuickSettings = true },
                     onClearChat = { viewModel.clearChat() }
                 )
             },
@@ -188,7 +196,11 @@ fun ChatScreen(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(currentMessages, key = { it.id }) { msg ->
-                            ChatMessageItem(message = msg)
+                            ChatMessageItem(
+                                message = msg,
+                                onPreviewHtml = { code -> previewHtmlCode = code },
+                                onExportDocument = { content -> exportContent = content }
+                            )
                         }
 
                         // Live streaming assistant response
@@ -208,6 +220,33 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    // Quick Model & Context Settings Dialog
+    if (showQuickSettings && selectedModel != null) {
+        ModelQuickSettingsDialog(
+            model = selectedModel!!,
+            onSaveModel = { viewModel.updateModel(it) },
+            onDismiss = { showQuickSettings = false }
+        )
+    }
+
+    // Live HTML Preview Dialog
+    previewHtmlCode?.let { html ->
+        HtmlPreviewDialog(
+            htmlCode = html,
+            onDismiss = { previewHtmlCode = null }
+        )
+    }
+
+    // Export Document Dialog (PDF, Word, Slides)
+    exportContent?.let { content ->
+        val title = currentSession?.title ?: "سند DezhAi"
+        ExportDocumentDialog(
+            documentTitle = title,
+            content = content,
+            onDismiss = { exportContent = null }
+        )
     }
 
     // GGUF Model Manager Dialog
