@@ -51,6 +51,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,9 +64,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.entity.ChatMessageEntity
@@ -232,28 +235,30 @@ private fun AssistantMessageBody(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Telemetry Badge
+                // Telemetry Badge (LTR isolated for proper number & unit rendering)
                 if (tokensPerSecond > 0 || tokenCount > 0) {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(DarkSurfaceVariant.copy(alpha = 0.6f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Bolt,
-                            contentDescription = null,
-                            tint = ChatGptEmerald,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${tokensPerSecond} t/s • ${tokenCount} tokens • ${latencyMs}ms",
-                            color = TextMuted,
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace
-                        )
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(DarkSurfaceVariant.copy(alpha = 0.6f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = null,
+                                tint = ChatGptEmerald,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${tokensPerSecond} t/s • ${tokenCount} tokens • ${latencyMs}ms",
+                                color = TextMuted,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
                     }
                 } else {
                     Spacer(modifier = Modifier.width(1.dp))
@@ -410,107 +415,109 @@ fun CodeBlock(
             code.contains("<html", ignoreCase = true) ||
             (code.contains("<div", ignoreCase = true) && code.contains("</div>", ignoreCase = true))
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(CodeBg)
-            .border(1.dp, Color(0xFF333333), RoundedCornerShape(8.dp))
-    ) {
-        // Code Header Bar
-        Row(
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CodeHeaderBg)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(vertical = 8.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(CodeBg)
+                .border(1.dp, Color(0xFF333333), RoundedCornerShape(8.dp))
         ) {
-            Text(
-                text = language.lowercase(),
-                color = TextGray,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
+            // Code Header Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CodeHeaderBg)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = language.lowercase(),
+                    color = TextGray,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // If HTML code, show Live Preview button
-                if (isHtml) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // If HTML code, show Live Preview button
+                    if (isHtml) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(DezhAiCyan.copy(alpha = 0.2f))
+                                .clickable { onPreviewHtml(code) }
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Live Preview",
+                                tint = DezhAiCyan,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "اجرای زنده HTML",
+                                color = DezhAiCyan,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(DezhAiCyan.copy(alpha = 0.2f))
-                            .clickable { onPreviewHtml(code) }
+                            .clickable {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("code", code)
+                                clipboard.setPrimaryClip(clip)
+                                copied = true
+                                Toast.makeText(context, "کد کپی شد", Toast.LENGTH_SHORT).show()
+                                scope.launch {
+                                    delay(2000)
+                                    copied = false
+                                }
+                            }
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Live Preview",
-                            tint = DezhAiCyan,
+                            imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
+                            contentDescription = "Copy Code",
+                            tint = if (copied) ChatGptEmerald else TextGray,
                             modifier = Modifier.size(13.dp)
                         )
-                        Spacer(modifier = Modifier.width(3.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "اجرای زنده HTML",
-                            color = DezhAiCyan,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            text = if (copied) "کپی شد" else "کپی کد",
+                            color = if (copied) ChatGptEmerald else TextGray,
+                            fontSize = 11.sp
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .clickable {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("code", code)
-                            clipboard.setPrimaryClip(clip)
-                            copied = true
-                            Toast.makeText(context, "کد کپی شد", Toast.LENGTH_SHORT).show()
-                            scope.launch {
-                                delay(2000)
-                                copied = false
-                            }
-                        }
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
-                        contentDescription = "Copy Code",
-                        tint = if (copied) ChatGptEmerald else TextGray,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (copied) "کپی شد" else "کپی کد",
-                        color = if (copied) ChatGptEmerald else TextGray,
-                        fontSize = 11.sp
-                    )
                 }
             }
-        }
 
-        // Code Content
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(12.dp)
-        ) {
-            Text(
-                text = code,
-                color = Color(0xFFD4D4D4),
-                fontSize = 13.sp,
-                fontFamily = FontFamily.Monospace,
-                lineHeight = 19.sp
-            )
+            // Code Content
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = code,
+                    color = Color(0xFFD4D4D4),
+                    fontSize = 13.sp,
+                    fontFamily = FontFamily.Monospace,
+                    lineHeight = 19.sp
+                )
+            }
         }
     }
 }

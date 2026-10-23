@@ -5,7 +5,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 
 private val DarkColorScheme = darkColorScheme(
     primary = ChatGptEmerald,
@@ -53,11 +56,16 @@ fun MyApplicationTheme(
     dynamicColor: Boolean = false, // Keep ChatGPT iconic palette consistent
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else DarkColorScheme // ChatGPT shines best in modern dark mode by default, or follows system
+    val colorScheme = if (darkTheme) DarkColorScheme else DarkColorScheme // ChatGPT shines best in modern dark mode by default
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+        typography = Typography
+    ) {
+        // Enforce Right-to-Left (راست‌چین) layout direction throughout the application
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            content()
+        }
+    }
 }
+

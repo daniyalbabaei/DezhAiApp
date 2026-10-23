@@ -215,21 +215,25 @@ fun HtmlPreviewDialog(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    // Source Code View
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .horizontalScroll(rememberScrollState())
-                            .padding(16.dp)
+                    // Source Code View (LTR isolated)
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr
                     ) {
-                        Text(
-                            text = htmlCode,
-                            color = Color(0xFFD4D4D4),
-                            fontSize = 12.sp,
-                            fontFamily = FontFamily.Monospace,
-                            lineHeight = 18.sp
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .horizontalScroll(rememberScrollState())
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = htmlCode,
+                                color = Color(0xFFD4D4D4),
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.Monospace,
+                                lineHeight = 18.sp
+                            )
+                        }
                     }
                 }
             }
