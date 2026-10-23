@@ -1,0 +1,6 @@
+{
+  "name": "DezhAi",
+  "description": "ChatGPT-style AI assistant with GGUF model runner, local model import, project workspaces, and persistent chats.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
